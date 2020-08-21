@@ -1,0 +1,1 @@
+Using a SCT013-30 to monitor the AC consumption, using the ADS1115 ADC
