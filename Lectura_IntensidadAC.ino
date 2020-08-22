@@ -1,13 +1,19 @@
+#define PRINT_DEBUG_MESSAGES
+
 #include <Wire.h>
 #include <Adafruit_ADS1015.h>
 #include <WiFi101.h>
+#include <ThingSpeak.h>
 #include "arduino_secrets.h"
 
 char ssid[] = SECRET_SSID;     // your network SSID (name)
 char pass[] = SECRET_PASS;     // your network password
 
+unsigned long myChannelNumber = SECRET_CH_ID;
+const char * myWriteAPIKey = SECRET_WRITE_APIKEY;
+
 int status = WL_IDLE_STATUS;
-WiFiSSLClient net;
+WiFiClient net;  //WiFiSSLClient no funciona por motivos desconocidos
 
 Adafruit_ADS1115 ads;
 
@@ -22,10 +28,12 @@ Serial.begin(9600);
 
 Serial.println("firmware: amperímetro_inteligente 0.0.2");
 
+connectWifi();
+
 ads.setGain(GAIN_TWO);        // ±2.048V  1 bit = 0.0625mV
 ads.begin();
 
-connectWifi();
+ThingSpeak.begin(net);  // Initialize ThingSpeak 
 }
 
 void loop()
@@ -37,9 +45,20 @@ float power = VOLTAJE * currentRMS;
 status = WiFi.status();
 if ( status != WL_CONNECTED) connectWifi();
 
+// Write to ThingSpeak. There are up to 8 fields in a channel, allowing you to store up to 8 different
+  // pieces of information in a channel.  Here, we write to field 1.
+  int x = ThingSpeak.writeField(myChannelNumber, 1, power, myWriteAPIKey);
+   if(x == 200){
+    Serial.println("Channel update successful.");
+  }
+  else{
+    Serial.println("Problem updating channel. HTTP error code " + String(x));
+  }
+
+
 printMeasure("Irms: ", currentRMS, "A ,");
 printMeasure("Potencia: ", power, "W");
-delay(1000);
+delay(14000);
 }
 
 float getCorriente()
